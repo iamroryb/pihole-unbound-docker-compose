@@ -1,0 +1,51 @@
+version: "3"
+
+networks:
+        dns_net:
+                driver: bridge
+                ipam:
+                        config:
+                        - subnet: 172.20.0.0/16
+
+services:
+        pihole:
+                container_name: pihole
+                image: pihole/pihole:latest
+                networks:
+                        dns_net:
+                                ipv4_address: 172.20.0.6
+                ports: 
+                        - "53:53/tcp"
+                        - "53:53/udp"
+                        - "67:67/udp"
+                        - "80:80/tcp"
+                environment:
+                        TZ: 'England/London'
+                        WEBPASSWORD: ${PIHOLE_PW} 
+                        PIHOLE_DNS: '172.20.0.7#5335'
+                volumes:
+                        - './etc-pihole:/etc/pihole'
+                        - './etc-dnsmasq.d:/etc/dnsmasq.d'
+                cap_add: 
+                        - NET_ADMIN
+                restart: unless-stopped
+        unbound:
+                container_name: unbound
+                image: madnuttah/unbound:latest
+                networks:
+                        dns_net:
+                                ipv4_address: 172.20.0.7
+                environment:
+                        TZ: 'England/London'
+                        ServerIP: '172.20.0.7'
+                volumes:
+                        - './unbound/conf.d/:/usr/local/unbound/conf.d/:rw'
+                        - './unbound/log.d/:/usr/local/unbound/log.d/:rw'
+                        - './unbound/zones.d/:/usr/local/unbound/zones.d/:rw'
+                        - './unbound/iana.d/:/usr/local/unbound/iana.d/:rw'
+                ports:
+                        - "5335:5335/tcp"
+                        - "5335:5335/udp"
+                healthcheck:
+                        disable: true
+                restart: unless-stopped
